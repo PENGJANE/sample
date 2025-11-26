@@ -20,10 +20,13 @@ ${RULES.map(r => `
 
 **Grading Logic:**
 - **S0**: No R1-R5 issues found (无任何R1-R5问题).
+  - Label: 【正常内容】.
   - Intervention: Normal recommendation (正常推荐).
 - **S1**: Meets exactly 1 rule from R1-R5, and it is NOT a severe risk.
+  - Label: 【低质内容】.
   - Intervention: Restricted visibility (限流).
 - **S2**: Meets 3 or more rules, OR contains a single EXTREMELY SEVERE violation (or meets 2 severe rules).
+  - Label: 【违规内容】.
   - Intervention: Filtered/Blocked (过滤/拦截).
 
 **Output Format:**
@@ -36,7 +39,7 @@ const responseSchema: Schema = {
     grade: {
       type: Type.STRING,
       enum: [SafetyGrade.S0, SafetyGrade.S1, SafetyGrade.S2],
-      description: "The final safety grade S0, S1, or S2."
+      description: "The final safety grade S0 (Normal), S1 (Low Quality), or S2 (Violating)."
     },
     intervention: {
       type: Type.STRING,
@@ -130,5 +133,44 @@ export const analyzeProductContent = async (
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
     throw error;
+  }
+};
+
+export const extractTextFromImage = async (
+  imageBase64: string,
+  imageMimeType: string
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        role: "user",
+        parts: [
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: imageMimeType
+            }
+          },
+          {
+            text: "请提取这张图片中所有的文字内容，直接输出识别到的文字即可，不要包含任何其他解释。如果图片中没有文字，请返回空字符串。"
+          }
+        ]
+      },
+      config: {
+        temperature: 0.1,
+      }
+    });
+
+    return response.text || "";
+  } catch (error) {
+    console.error("OCR Error:", error);
+    throw new Error("图片文字提取失败");
   }
 };

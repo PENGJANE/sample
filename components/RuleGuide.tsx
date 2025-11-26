@@ -48,11 +48,11 @@ const RuleGuide: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">干预模式 (S0-S2)</h4>
+            <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">干预模式</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {Object.entries(GRADE_DEFINITIONS).map(([grade, def]) => (
                 <div key={grade} className={`p-3 rounded-md border ${def.color} bg-opacity-10 border-opacity-50`}>
-                  <div className="font-bold text-lg mb-1">{grade}</div>
+                  <div className="font-bold text-lg mb-1">{def.label}</div>
                   <div className="text-xs font-semibold uppercase mb-2 opacity-75">{def.intervention.split('：')[0]}</div>
                   <p className="text-sm mb-2">{def.intervention}</p>
                   <p className="text-xs italic opacity-80">"{def.logic}"</p>

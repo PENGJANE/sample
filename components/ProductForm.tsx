@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ProductInput } from '../types';
+import { extractTextFromImage } from '../services/geminiService';
 
 interface ProductFormProps {
   input: ProductInput;
@@ -10,6 +11,7 @@ interface ProductFormProps {
 
 const ProductForm: React.FC<ProductFormProps> = ({ input, onChange, onSubmit, isLoading }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange({ ...input, description: e.target.value });
@@ -33,6 +35,35 @@ const ProductForm: React.FC<ProductFormProps> = ({ input, onChange, onSubmit, is
   const clearImage = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
     onChange({ ...input, image: null, imagePreview: null });
+  };
+
+  const handleExtractText = async () => {
+    if (!input.imagePreview) return;
+
+    setIsExtracting(true);
+    try {
+      const parts = input.imagePreview.split(',');
+      if (parts.length === 2) {
+        const imageBase64 = parts[1];
+        const header = parts[0];
+        const mimeMatch = header.match(/:(.*?);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+
+        const text = await extractTextFromImage(imageBase64, mimeType);
+        
+        if (text) {
+          const newDescription = input.description 
+            ? `${input.description}\n\n[图片提取文字]: ${text}`
+            : text;
+          onChange({ ...input, description: newDescription });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to extract text", error);
+      // Optional: Add a toast notification here
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   return (
@@ -86,7 +117,30 @@ const ProductForm: React.FC<ProductFormProps> = ({ input, onChange, onSubmit, is
 
       {/* Description Text Area */}
       <div className="mb-6 flex-grow">
-        <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">商品标题与描述 (Title & Description)</label>
+        <div className="flex justify-between items-end mb-2">
+            <label htmlFor="description" className="block text-sm font-medium text-slate-700">商品标题与描述 (Title & Description)</label>
+            {input.imagePreview && (
+                <button
+                    onClick={handleExtractText}
+                    disabled={isExtracting || isLoading}
+                    className={`text-xs flex items-center gap-1 px-2 py-1 rounded border transition-colors ${
+                        isExtracting 
+                        ? 'bg-indigo-50 text-indigo-400 border-indigo-200 cursor-wait' 
+                        : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
+                    }`}
+                >
+                    {isExtracting ? (
+                         <svg className="animate-spin h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                         </svg>
+                    ) : (
+                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    )}
+                    {isExtracting ? '正在识别...' : '自动提取图中文字'}
+                </button>
+            )}
+        </div>
         <textarea
           id="description"
           rows={6}
@@ -101,9 +155,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ input, onChange, onSubmit, is
       <div className="mt-auto pt-4 border-t border-slate-100">
         <button
           onClick={onSubmit}
-          disabled={isLoading || (!input.description && !input.image)}
+          disabled={isLoading || (!input.description && !input.image) || isExtracting}
           className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-white font-semibold shadow-md transition-all
-            ${isLoading || (!input.description && !input.image)
+            ${isLoading || (!input.description && !input.image) || isExtracting
               ? 'bg-slate-400 cursor-not-allowed' 
               : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg transform active:scale-[0.98]'
             }`}

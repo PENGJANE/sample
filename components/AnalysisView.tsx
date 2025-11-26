@@ -43,7 +43,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, isLoading }) => {
       <div className={`p-6 rounded-xl border-2 ${gradeDef.color} shadow-sm bg-opacity-20`}>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-3xl font-bold mb-1">{result.grade}</h2>
+            <h2 className="text-3xl font-bold mb-1">{gradeDef.label}</h2>
             <p className="font-medium text-lg opacity-90">{gradeDef.intervention}</p>
           </div>
           <div className="text-right max-w-[200px]">
