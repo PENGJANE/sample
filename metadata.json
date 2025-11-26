@@ -1,0 +1,5 @@
+{
+  "name": "ContentModerator AI",
+  "description": "An AI-powered content moderation tool that evaluates e-commerce products against safety rules (R1-R5) and determines intervention levels (S0-S2).",
+  "requestFramePermissions": []
+}
