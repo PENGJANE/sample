@@ -55,7 +55,12 @@ const App: React.FC = () => {
       setResult(analysis);
     } catch (e) {
       console.error(e);
-      setError("审核分析过程中发生错误，请重试。请检查 API Key 是否配置正确。");
+      const errorMessage = e instanceof Error ? e.message : "未知错误";
+      if (errorMessage.includes("API Key is missing")) {
+        setError(`配置错误: ${errorMessage} (提示: 在 Vercel 中，请尝试将环境变量命名为 VITE_API_KEY 以确保前端可读取)`);
+      } else {
+        setError("审核分析过程中发生错误，请重试。");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +95,8 @@ const App: React.FC = () => {
                    </svg>
                 </div>
                 <div className="ml-3">
-                   <p className="text-sm text-red-700">{error}</p>
+                   <p className="text-sm text-red-700 font-medium">出错了</p>
+                   <p className="text-sm text-red-600 mt-1">{error}</p>
                 </div>
             </div>
         )}

@@ -2,6 +2,26 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, SafetyGrade, RuleType } from "../types";
 import { RULES } from "../constants";
 
+// Helper to resolve API Key from various environment configurations common in Vercel/Vite/React
+const getApiKey = (): string | undefined => {
+  // 1. Try standard process.env (Node/Webpack/Polyfilled)
+  if (typeof process !== 'undefined' && process.env?.API_KEY) {
+    return process.env.API_KEY;
+  }
+  // 2. Try Vite standard (VITE_API_KEY)
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_KEY) {
+    // @ts-ignore
+    return import.meta.env.VITE_API_KEY;
+  }
+  // 3. Try Next.js/CRA public prefix conventions just in case
+  if (typeof process !== 'undefined') {
+    if (process.env?.NEXT_PUBLIC_API_KEY) return process.env.NEXT_PUBLIC_API_KEY;
+    if (process.env?.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
+  }
+  return undefined;
+};
+
 // Construct the system prompt dynamically from our constants to ensure consistency
 const SYSTEM_INSTRUCTION = `
 You are an expert Content Safety Moderator for an e-commerce platform (电商平台内容审核专家).
@@ -83,11 +103,12 @@ export const analyzeProductContent = async (
   imageMimeType: string | null
 ): Promise<AnalysisResult> => {
   
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please check your environment configuration.");
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please check your Vercel Environment Variables. (Try naming it 'VITE_API_KEY' for Vite apps).");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   const parts: any[] = [];
   
@@ -140,11 +161,12 @@ export const extractTextFromImage = async (
   imageBase64: string,
   imageMimeType: string
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing.");
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("API Key is missing. Check Vercel Env Vars.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   try {
     const response = await ai.models.generateContent({
@@ -171,6 +193,6 @@ export const extractTextFromImage = async (
     return response.text || "";
   } catch (error) {
     console.error("OCR Error:", error);
-    throw new Error("图片文字提取失败");
+    throw new Error("图片文字提取失败: " + (error instanceof Error ? error.message : "Unknown Error"));
   }
 };
